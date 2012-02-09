@@ -71,7 +71,7 @@ class CFBase(unittest.TestCase):
             os.environ['PYTHONPATH'] = '%s:%s' % (os.environ['PYTHONPATH'], pythonPath)
         I = self.inform
         # Step 1: Create the scratch directory and chdir into it.
-        self.scratchDir = scratchDir = tempfile.mktemp() 
+        self.scratchDir = scratchDir = tempfile.mktemp()
         os.mkdir(scratchDir)
         self.origCwd = os.getcwd()
         os.chdir(scratchDir)
@@ -96,7 +96,7 @@ class CFBase(unittest.TestCase):
             warn("Warning: not deleting scratch directory %s" % self.scratchDir)
 
 
-    def _checkDestFileHelper(self, path, expected, 
+    def _checkDestFileHelper(self, path, expected,
         allowSurroundingText, errmsg):
         """Low-level helper to check a destination file.
 
@@ -206,8 +206,8 @@ Found %(result)r"""
         else:
             self.failIfEqual(status, 0, '''Subprocess exited with a zero status (%d)
                             %s''' % (status, output))
-        return output 
-    
+        return output
+
     def go(self, cmd, expectedStatus=0, expectedOutputSubstring=None):
         """Run a "cheetah compile" or "cheetah fill" subcommand.
 
@@ -512,7 +512,7 @@ class IdirFlatRecurseCollision(CFIdirBase):
 
 
 class NoBackup(CFBase):
-    """Run the command twice each time and verify a backup file is 
+    """Run the command twice each time and verify a backup file is
        *not* created.
     """
     def testCompile(self):
@@ -572,7 +572,7 @@ def main():
                 sys.argv.append("--" + opt)
         sys.argv.extend(files)
         unittest.main()
-        
+
 if __name__ == '__main__':
     main()
 

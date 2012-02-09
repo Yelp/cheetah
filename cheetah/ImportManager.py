@@ -4,7 +4,7 @@ Provides an emulator/replacement for Python's standard import system.
 @@TR: Be warned that Import Hooks are in the deepest, darkest corner of Python's
 jungle.  If you need to start hacking with this, be prepared to get lost for a
 while. Also note, this module predates the newstyle import hooks in Python 2.3
-http://www.python.org/peps/pep-0302.html.  
+http://www.python.org/peps/pep-0302.html.
 
 
 This is a hacked/documented version of Gordon McMillan's iu.py. I have:
@@ -17,7 +17,7 @@ This is a hacked/documented version of Gordon McMillan's iu.py. I have:
 
   - reorganized the code layout to enhance readability
 
-""" 
+"""
 
 import sys
 import imp
@@ -79,7 +79,7 @@ def _os_bootstrap():
                 if c == '/' or c == sep:
                     return a[:i]
             return ''
-    
+
     global _os_stat
     _os_stat = stat
 
@@ -88,10 +88,10 @@ def _os_bootstrap():
 
     global _os_path_dirname
     _os_path_dirname = dirname
-    
+
     global _os_getcwd
     _os_getcwd = getcwd
-    
+
 _os_bootstrap()
 
 def packageName(s):
@@ -137,35 +137,35 @@ def getDescr(fnm):
 ## CLASSES
 
 class Owner:
-    
+
     """An Owner does imports from a particular piece of turf That is, there's
     an Owner for each thing on sys.path There are owners for directories and
     .pyz files.  There could be owners for zip files, or even URLs.  A
     shadowpath (a dictionary mapping the names in sys.path to their owners) is
     used so that sys.path (or a package's __path__) is still a bunch of strings,
     """
-    
+
     def __init__(self, path):
         self.path = path
 
     def __str__(self):
         return self.path
-    
+
     def getmod(self, nm):
         return None
-    
+
 class DirOwner(Owner):
-    
+
     def __init__(self, path):
         if path == '':
             path = _os_getcwd()
         if not pathIsDir(path):
             raise ValueError("%s is not a directory" % path)
         Owner.__init__(self, path)
-        
+
     def getmod(self, nm,
                getsuffixes=imp.get_suffixes, loadco=marshal.loads, newmod=imp.new_module):
-        
+
         pth =  _os_path_join(self.path, nm)
 
         possibles = [(pth, 0, None)]
@@ -242,7 +242,7 @@ class BuiltinImportDirector(ImportDirector):
 
 class FrozenImportDirector(ImportDirector):
     """Directs imports of frozen modules"""
-    
+
     def __init__(self):
         self.path = 'FrozenModules'
 
@@ -288,7 +288,7 @@ class RegistryImportDirector(ImportDirector):
                         hskey.Close()
                     hkey.Close()
                     break
-                
+
     def getmod(self, nm):
         stuff = self.map.get(nm)
         if stuff:
@@ -298,7 +298,7 @@ class RegistryImportDirector(ImportDirector):
             mod.__file__ = fnm
             return mod
         return None
-    
+
 class PathImportDirector(ImportDirector):
     """Directs imports of modules stored on the filesystem."""
 
@@ -317,7 +317,7 @@ class PathImportDirector(ImportDirector):
             self._shadowPath = {}
         self._inMakeOwner = False
         self._building = {}
-        
+
     def getmod(self, nm):
         mod = None
         for thing in self.path:
@@ -332,7 +332,7 @@ class PathImportDirector(ImportDirector):
             if mod:
                 break
         return mod
-    
+
     def _makeOwner(self, path):
         if self._building.get(path):
             return None
@@ -369,22 +369,22 @@ class ImportManager:
         self.rlock = None
         self.locker = None
         self.setThreaded()
-        
+
     def setThreaded(self):
         thread = sys.modules.get('thread', None)
         if thread and not self.threaded:
             self.threaded = 1
             self.rlock = thread.allocate_lock()
             self._get_ident = thread.get_ident
-            
+
     def install(self):
         import __builtin__
         __builtin__.__import__ = self.importHook
         __builtin__.reload = self.reloadHook
-        
+
     def importHook(self, name, globals=None, locals=None, fromlist=None, level=-1):
         '''
-            NOTE: Currently importHook will accept the keyword-argument "level" 
+            NOTE: Currently importHook will accept the keyword-argument "level"
             but it will *NOT* use it (currently). Details about the "level" keyword
             argument can be found here: http://www.python.org/doc/2.5.2/lib/built-in-funcs.html
         '''
@@ -432,14 +432,14 @@ class ImportManager:
                 i = i + 1
             if i:
                 break
-            
+
         if i<len(nmparts):
             if ctx and hasattr(sys.modules[ctx], nmparts[i]):
                 #print "importHook done with %s %s %s (case 1)" % (name, globals['__name__'], fromlist)
                 return sys.modules[nmparts[0]]
             del sys.modules[fqname]
             raise ImportError("No module named %s" % fqname)
-        if fromlist is None: 
+        if fromlist is None:
             #print "importHook done with %s %s %s (case 2)" % (name, globals['__name__'], fromlist)
             if context:
                 return sys.modules[context+'.'+nmparts[0]]
@@ -466,7 +466,7 @@ class ImportManager:
                         raise ImportError("%s not found in %s" % (nm, ctx))
         #print "importHook done with %s %s %s (case 3)" % (name, globals['__name__'], fromlist)
         return bottommod
-    
+
     def doimport(self, nm, parentnm, fqname):
         # Not that nm is NEVER a dotted name at this point
         #print "doimport(%s, %s, %s)" % (nm, parentnm, fqname)
@@ -503,7 +503,7 @@ class ImportManager:
             sys.modules[fqname] = None
         #print "..found %s" % mod
         return mod
-    
+
     def reloadHook(self, mod):
         fqnm = mod.__name__
         nm = nameSplit(fqnm)[-1]
@@ -511,7 +511,7 @@ class ImportManager:
         newmod = self.doimport(nm, parentnm, fqnm)
         mod.__dict__.update(newmod.__dict__)
 ##        return newmod
-        
+
     def _acquire(self):
         if self.rlock.locked():
             if self.locker == self._get_ident():
@@ -522,7 +522,7 @@ class ImportManager:
         self.locker = self._get_ident()
         self.lockcount = 0
 ##        print "_acquire first time!"
-        
+
     def _release(self):
         if self.lockcount:
             self.lockcount = self.lockcount - 1

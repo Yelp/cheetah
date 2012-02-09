@@ -8,7 +8,7 @@ author = "Tavis Rudd"
 author_email = "cheetahtemplate-discuss@lists.sf.net"
 url = "http://www.cheetahtemplate.org/"
 packages = ['Cheetah',
-            'Cheetah.Macros',            
+            'Cheetah.Macros',
             'Cheetah.Templates',
             'Cheetah.Tests',
             'Cheetah.Tools',
@@ -38,11 +38,11 @@ import os.path
 from distutils.core import Extension
 
 ext_modules=[
-             Extension("Cheetah._namemapper", 
+             Extension("Cheetah._namemapper",
                         [os.path.join('cheetah', 'c', '_namemapper.c')]),
-           #  Extension("Cheetah._verifytype", 
+           #  Extension("Cheetah._verifytype",
            #             [os.path.join('cheetah', 'c', '_verifytype.c')]),
-           #  Extension("Cheetah._filters", 
+           #  Extension("Cheetah._filters",
            #             [os.path.join('cheetah', 'c', '_filters.c')]),
            #  Extension('Cheetah._template',
            #             [os.path.join('cheetah', 'c', '_template.c')]),

@@ -10,7 +10,7 @@ License: This software is released for unlimited distribution under the
 Version: $Revision: 1.10 $
 Start Date: 2002/03/17
 Last Revision Date: $Date: 2006/01/06 21:56:54 $
-""" 
+"""
 __author__ = "Mike Orr <iron@mso.oz.net>"
 __revision__ = "$Revision: 1.10 $"[11:-2]
 
@@ -42,8 +42,8 @@ def _lookup(name, func, multi, converters):
     single vs multi values according to the comments in the source.
     """
     # Step 1 -- split off the conversion suffix from 'name'; e.g. "height:int".
-    # If there's no colon, the suffix is "".  'longName' is the name with the 
-    # suffix, 'shortName' is without.    
+    # If there's no colon, the suffix is "".  'longName' is the name with the
+    # suffix, 'shortName' is without.
     # XXX This implementation assumes "height:" means "height".
     colon = name.find(':')
     if colon != -1:
@@ -72,7 +72,7 @@ def _lookup(name, func, multi, converters):
     except KeyError:
         fmt = "'%s' is not a valid converter name in '%s'"
         tup = (ext, longName)
-        raise TypeError(fmt % tup)    
+        raise TypeError(fmt % tup)
 
     # Step 5 -- if there's a converter func, run it on each element.
     # If the converter raises an exception, use or raise 'converter.error'.
