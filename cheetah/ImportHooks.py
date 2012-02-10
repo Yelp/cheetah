@@ -33,7 +33,7 @@ _cacheDir = []
 def setCacheDir(cacheDir):
     global _cacheDir
     _cacheDir.append(cacheDir)
-    
+
 ##################################################
 ## CLASSES
 
@@ -46,7 +46,7 @@ class CheetahDirOwner(DirOwner):
 
     def getmod(self, name):
         self._acquireLock()
-        try:        
+        try:
             mod = DirOwner.getmod(self, name)
             if mod:
                 return mod
@@ -67,7 +67,7 @@ class CheetahDirOwner(DirOwner):
             return None
 
         finally:
-            self._releaseLock()          
+            self._releaseLock()
 
     def _compile(self, name, tmplPath):
         ## @@ consider adding an ImportError raiser here
@@ -93,7 +93,7 @@ class CheetahDirOwner(DirOwner):
                                          # filemonitoring code
         mod.__co__ = co
         return mod
-        
+
 
 ##################################################
 ## FUNCTIONS
@@ -109,14 +109,14 @@ def install(templateFileExtensions=('.tmpl',)):
             global __oldimport__
             __oldimport__ = __builtin__.__import__
             ImportManager._globalOwnerTypes.insert(0, CheetahDirOwner)
-            #ImportManager._globalOwnerTypes.append(CheetahDirOwner)            
+            #ImportManager._globalOwnerTypes.append(CheetahDirOwner)
             global _manager
             _manager=ImportManager.ImportManager()
             _manager.setThreaded()
             _manager.install()
-        
+
 def uninstall():
-    """Uninstall the Cheetah Import Hooks"""    
+    """Uninstall the Cheetah Import Hooks"""
     global _installed
     if not _installed:
         import __builtin__

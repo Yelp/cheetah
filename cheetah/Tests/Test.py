@@ -48,6 +48,6 @@ if __name__ == '__main__':
     if 'xml' in sys.argv:
         import xmlrunner
         runner = xmlrunner.XMLTestRunner(filename='Cheetah-Tests.xml')
-    
+
     results = runner.run(unittest.TestSuite(suites))
 
