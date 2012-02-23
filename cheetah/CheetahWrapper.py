@@ -168,11 +168,12 @@ class CheetahWrapper(object):
         pao("--pickle", action="store", dest="pickle", default="", help='Unpickle FILE and pass it through in the search list')
         pao("--flat", action="store_true", dest="flat", default=False, help='Do not build destination subdirectories')
         pao("--nobackup", action="store_true", dest="nobackup", default=False, help='Do not make backup files when generating new ones')
-        pao("--settings", action="store", dest="compilerSettingsString", default=None, help='String of compiler settings to pass through, e.g. --settings="useNameMapper=False,useFilters=False"')
+        pao("--settings", action="store", dest="compilerSettingsString", default='', help='String of compiler settings to pass through, e.g. --settings="useNameMapper=False,useFilters=False"')
         pao('--print-settings', action='store_true', dest='print_settings', help='Print out the list of available compiler settings')
         pao("--templateAPIClass", action="store", dest="templateClassName", default=None, help='Name of a subclass of Cheetah.Template.Template to use for compilation, e.g. MyTemplateClass')
         pao("--parallel", action="store", type="int", dest="parallel", default=1, help='Compile/fill templates in parallel, e.g. --parallel=4')
         pao('--shbang', dest='shbang', default='#!/usr/bin/env python', help='Specify the shbang to place at the top of compiled templates, e.g. --shbang="#!/usr/bin/python2.6"')
+        pao('--macros', dest='macros', default='', help='A comma-separated list of modules containing only cheetah macros.')
         pao('--encoding', dest='encoding', default=None, help='Specify the encoding of source files (e.g. \'utf-8\' to force input files to be interpreted as UTF-8)')
 
         opts, files = self.parser.parse_args(args)
@@ -197,13 +198,24 @@ Files are %s""", args, pprint.pformat(vars(opts)), files)
 
         if opts.print_settings:
             print() 
-            print('>> Available Cheetah compiler settings:')
+            print('>> Current Cheetah compiler settings:')
             from Cheetah.Compiler import _DEFAULT_COMPILER_SETTINGS
             listing = _DEFAULT_COMPILER_SETTINGS
             listing.sort(key=lambda l: l[0][0].lower())
 
-            for l in listing:
-                print('\t%s (default: "%s")\t%s' % l)
+            settings = self._getCompilerSettings()
+
+            for name, default, text in listing:
+                if settings.get(name, default) != default:
+                    print("\t%s (value: '%s', default: '%s')\t%s" % (name, settings[name], default, text))
+                else:
+                    print("\t%s (default: '%s')\t%s" % (name, default, text))
+                if name in settings:
+                    del name
+
+            for name, value in sorted(settings.items()):
+                print("\t%s (value: '%s')" % (name, value))
+
             sys.exit(0)
 
         #cleanup trailing path separators
@@ -532,29 +544,44 @@ you do have write permission to and re-run the tests.""")
 
     def _getCompilerSettings(self):
         if self._compilerSettings:
-            return self._compilerSettings
+            return self._compilerSettings.copy()
 
         def getkws(**kws):
             return kws
-        if self.opts.compilerSettingsString:
-            try:
-                exec('settings = getkws(%s)'%self.opts.compilerSettingsString)
-            except:                
-                self.error("There's an error in your --settings option."
-                          "It must be valid Python syntax.\n"
-                          +"    --settings='%s'\n"%self.opts.compilerSettingsString
-                          +"  %s: %s"%sys.exc_info()[:2] 
-                          )
 
-            validKeys = DEFAULT_COMPILER_SETTINGS.keys()
-            if [k for k in settings.keys() if k not in validKeys]:
-                self.error(
-                    'The --setting "%s" is not a valid compiler setting name.'%k)
-            
-            self._compilerSettings = settings
-            return settings
-        else:
-            return {}
+        try:
+            exec('settings = getkws(%s)'%self.opts.compilerSettingsString)
+        except:
+            self.error("There's an error in your --settings option."
+                        "It must be valid Python syntax.\n"
+                        +"    --settings='%s'\n"%self.opts.compilerSettingsString
+                        +"  %s: %s"%sys.exc_info()[:2]
+                        )
+
+        validKeys = DEFAULT_COMPILER_SETTINGS.keys()
+        if [k for k in settings.keys() if k not in validKeys]:
+            self.error(
+                'The --setting "%s" is not a valid compiler setting name.'%k)
+
+        if self.opts.macros:
+            macroDirectives = {}
+            for dotted_name in self.opts.macros.split(','):
+                if not dotted_name:
+                    continue
+
+                module = get_module(dotted_name)
+                try:
+                    macro_names = module.__all__
+                except AttributeError:
+                    raise SystemError("Could not find macros. Please define %s.__all__" % dotted_name)
+
+                for macro_name in macro_names:
+                    macroDirectives[macro_name] = getattr(module, macro_name)
+
+            settings['macroDirectives'] = macroDirectives
+
+        self._compilerSettings = settings
+        return self._compilerSettings.copy()
 
     def _compileOrFillStdin(self):
         TemplateClass = self._getTemplateClass()
@@ -616,6 +643,32 @@ be named according to the same rules as Python modules.""" % tup)
             f.write(output)
             f.close()
             
+
+def get_module(dotted_name):
+    """
+    Get a python module by its dotted name.
+
+    See: http://docs.python.org/library/imp.html#imp.find_module
+
+    >>> get_module('xml.dom')
+    <module 'xml.dom' from '.../xml/dom/__init__.pyc'>
+    """
+    import imp
+
+    parts = dotted_name.split('.')
+    module = imp.new_module('<dummy>')
+    module.__path__ = None
+
+    for i in range(len(parts)):
+        module_name = parts[i]
+        modulespec = imp.find_module(module_name, module.__path__)
+
+        module_name = '.'.join(parts[:i+1])
+        module = imp.load_module(module_name, *modulespec)
+
+    return module
+
+
 
 # Called when invoked as `cheetah`
 def _cheetah():
