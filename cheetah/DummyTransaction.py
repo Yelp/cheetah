@@ -54,17 +54,29 @@ class DummyResponse(object):
     def getvalue(self, outputChunks=None):
         chunks = outputChunks or self._outputChunks
         try:
-            return u''.join(chunks)
+            return concat(chunks)
         except UnicodeDecodeError, ex:
             logging.debug('Trying to work around a UnicodeDecodeError in getvalue()')
             logging.debug('...perhaps you could fix "%s" while you\'re debugging')
-            return ''.join((self.safeConvert(c) for c in chunks))
+            return concat(self.safeConvert(c) for c in chunks)
 
     def writelines(self, *lines):
         ## not used
         [self.writeln(ln) for ln in lines]
         
+def concat(strings):
+        strings = iter(strings)
 
+        try:
+                result = strings.next()
+        except StopIteration:
+                return u''
+
+        for string in strings:
+                result += string
+        return result
+
+ 
 class DummyTransaction(object):
     '''
         A dummy Transaction class is used by Cheetah in place of real Webware

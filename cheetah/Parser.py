@@ -2493,13 +2493,26 @@ class _HighLevelParser(_LowLevelParser):
         else:
             isKlass = False
             theFilter = self.getIdentifier()
+        self.getWhiteSpace()
+
+        #TODO(buck|2011-11-30): unit test this extended statement
+        # "#filter a b" should throw an error.
+        if not self.atEnd() and self.peek()==',':
+            self.advance() # skip over :
             self.getWhiteSpace()
+            if self.matchCheetahVarStart():
+                untaint = self.getExpression(pyTokensToBreakAt=[':'])
+            else:
+                untaint = self.getCheetahVar(plain=True, skipStartToken=True)
+        else:
+            untaint = None
+        self.getWhiteSpace()
         theFilter = self._applyExpressionFilters(theFilter, 'filter', startPos=startPos)            
 
         if self.matchColonForSingleLineShortFormDirective():
             self.advance() # skip over :
             self.getWhiteSpace(max=1)            
-            self._compiler.setFilter(theFilter, isKlass)
+            self._compiler.setFilter(theFilter, untaint, isKlass)
             self.parse(breakPoint=self.findEOL(gobble=False))
             self._compiler.closeFilterBlock()
         else:
@@ -2508,7 +2521,7 @@ class _HighLevelParser(_LowLevelParser):
             self.getWhiteSpace()
             self.pushToOpenDirectivesStack("filter")
             self._eatRestOfDirectiveTag(isLineClearToStartToken, endOfFirstLinePos)
-            self._compiler.setFilter(theFilter, isKlass)        
+            self._compiler.setFilter(theFilter, untaint, isKlass)
 
     def eatTransform(self):
         isLineClearToStartToken = self.isLineClearToStartToken()
