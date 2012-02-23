@@ -1,3 +1,4 @@
+# vim: softtabstop=4 shiftwidth=4 expandtab
 '''
     Compiler classes for Cheetah:
     ModuleCompiler aka 'Compiler'
@@ -11,25 +12,26 @@
 import sys
 import os
 import os.path
-from os.path import getmtime, exists
+from os.path import getmtime
 import re
-import types
 import time
 import random
 import warnings
 import copy
 import codecs
 
+#TODO(buck|2011-11-22): remove all this random crap. I'm pretty certain it's unecessary.
+random.seed(0) # random, but deterministic
+
 from Cheetah.Version import Version, VersionTuple
 from Cheetah.SettingsManager import SettingsManager
 from Cheetah.Utils.Indenter import indentize # an undocumented preprocessor
-from Cheetah import ErrorCatchers
 from Cheetah import NameMapper
 from Cheetah.Parser import Parser, ParseError, specialVarRE, \
-     STATIC_CACHE, REFRESH_CACHE, SET_LOCAL, SET_GLOBAL, SET_MODULE, \
+     STATIC_CACHE, REFRESH_CACHE, SET_GLOBAL, SET_MODULE, \
      unicodeDirectiveRE, encodingDirectiveRE, escapedNewlineRE
 
-from Cheetah.NameMapper import NotFound, valueForName, valueFromSearchList, valueFromFrameOrSearchList
+from Cheetah.NameMapper import valueForName, valueFromSearchList, valueFromFrameOrSearchList
 VFFSL=valueFromFrameOrSearchList
 VFSL=valueFromSearchList
 VFN=valueForName
@@ -459,7 +461,11 @@ class MethodCompiler(GenUtils):
             out.append('"""')
             out.append(body)
             out.append('"""')
-        self.addWriteChunk(''.join(out))
+
+        if self.setting('useFilters'):
+            self.addWriteChunk('_untaint(' + ''.join(out) + ')')
+        else:
+            self.addWriteChunk(''.join(out))
 
     def handleWSBeforeDirective(self):
         """Truncate the pending strCont to the beginning of the current line.
@@ -932,13 +938,14 @@ class MethodCompiler(GenUtils):
         self.addChunk('trans._response._filter = %s' % transformer)
         self.addChunk('write = trans._response.write')
         
-    def setFilter(self, theFilter, isKlass):
+    def setFilter(self, theFilter, untaint, isKlass):
         class FilterDetails: 
             pass
         filterDetails = FilterDetails()
         filterDetails.ID = ID = self.nextFilterRegionID()
         filterDetails.theFilter = theFilter
         filterDetails.isKlass = isKlass
+        filterDetails.untaint = untaint
         self._filterRegionsStack.append((ID, filterDetails)) # attrib of current methodCompiler
 
         self.addChunk('_orig_filter%(ID)s = _filter'%locals())
@@ -955,18 +962,30 @@ class MethodCompiler(GenUtils):
                 self.indent()
                 self.addChunk('_filter = self._CHEETAH__currentFilter = self._CHEETAH__filters[filterName]')
                 self.dedent()
+                self.addChunk('elif hasattr(self._CHEETAH__filtersLib, filterName):')
+                self.indent()
+                self.addChunk('_filter = self._CHEETAH__currentFilter = \\')
+                self.addChunk('    self._CHEETAH__filters[filterName] = \\')
+                self.addChunk('    getattr(self._CHEETAH__filtersLib, filterName)(self).filter')
+                self.dedent()
                 self.addChunk('else:')
                 self.indent()
-                self.addChunk('_filter = self._CHEETAH__currentFilter'
-                              +' = \\\n\t\t\tself._CHEETAH__filters[filterName] = '
-                              + 'getattr(self._CHEETAH__filtersLib, filterName)(self).filter')
+                self.addChunk('_filter = self._CHEETAH__currentFilter = \\')
+                self.addChunk('    self._CHEETAH__filters[filterName] = \\')
+                self.addChunk('    ' + theFilter)
                 self.dedent()
-                
+                 
+        if untaint is not None:
+            self.addChunk('_orig_untaint = _untaint')
+            self.addChunk('_untaint = self._CHEETAH__untaint = ' + untaint)
+ 
     def closeFilterBlock(self):
         ID, filterDetails = self._filterRegionsStack.pop()
         #self.addChunk('_filter = self._CHEETAH__initialFilter')
         #self.addChunk('_filter = _orig_filter%(ID)s'%locals())
         self.addChunk('_filter = self._CHEETAH__currentFilter = _orig_filter%(ID)s'%locals())
+        if filterDetails.untaint is not None:
+            self.addChunk('_untaint = self._CHEETAH__untaint = _orig_untaint')
 
 class AutoMethodCompiler(MethodCompiler):
 
@@ -1069,8 +1088,10 @@ class AutoMethodCompiler(MethodCompiler):
         if self.setting('useFilters'):
             if self.isClassMethod() or self.isStaticMethod():
                 self.addChunk('_filter = lambda x, **kwargs: unicode(x)')
+                self.addChunk('_untaint = lambda x: x')
             else:
                 self.addChunk('_filter = self._CHEETAH__currentFilter')
+                self.addChunk('_untaint = self._CHEETAH__untaint')
         self.addChunk('')
         self.addChunk("#" *40)
         self.addChunk('## START - generated method body')
@@ -1087,7 +1108,10 @@ class AutoMethodCompiler(MethodCompiler):
         self.addChunk('')
         
     def addStop(self, expr=None):
-        self.addChunk('return _dummyTrans and trans.response().getvalue() or ""')
+        if self.setting('useFilters'):
+            self.addChunk('return _dummyTrans and trans.response().getvalue() or _untaint(u"")')
+        else:
+            self.addChunk('return _dummyTrans and trans.response().getvalue() or u""')
 
     def addMethArg(self, name, defVal=None):
         self._argStringList.append( (name, defVal) )
@@ -1645,7 +1669,7 @@ class ModuleCompiler(SettingsManager, GenUtils):
             "import Cheetah.ErrorCatchers as ErrorCatchers",
             ]        
 
-        self._importedVarNames = ['sys',
+        self._importedVarNames = set(['sys',
                                   'os',
                                   'os.path',
                                   'time',
@@ -1656,7 +1680,7 @@ class ModuleCompiler(SettingsManager, GenUtils):
                                   'Filters',
                                   'ErrorCatchers',
                                   'CacheRegion',
-                                  ]
+                                  ])
         
         self._moduleConstants = [
             "VFFSL=valueFromFrameOrSearchList",
@@ -1715,7 +1739,7 @@ class ModuleCompiler(SettingsManager, GenUtils):
             if raw_statement and getattr(self, '_methodBodyChunks'):
                 self.addChunk(raw_statement)
         else:
-            self._importedVarNames.extend(varNames)
+            self._importedVarNames.update(varNames)
 
     ## methods for adding stuff to the module and class definitions
 
@@ -1783,9 +1807,6 @@ class ModuleCompiler(SettingsManager, GenUtils):
 
     def setCompilerSettings(self, keywords, settingsStr):
         KWs = keywords
-        merge = True
-        if 'nomerge' in KWs:
-            merge = False
             
         if 'reset' in KWs:
             # @@TR: this is actually caught by the parser at the moment. 
@@ -1839,7 +1860,8 @@ class ModuleCompiler(SettingsManager, GenUtils):
         if not self._methodBodyChunks or settings.get('useLegacyImportMode'):
             # In the case where we are importing inline in the middle of a source block
             # we don't want to inadvertantly import the module at the top of the file either
-            self._importStatements.append(impStatement)
+            if impStatement not in self._importStatements:
+                self._importStatements.append(impStatement)
 
         #@@TR 2005-01-01: there's almost certainly a cleaner way to do this!
         importVarNames = impStatement[impStatement.find('import') + len('import'):].split(',')

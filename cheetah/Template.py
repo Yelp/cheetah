@@ -1,3 +1,4 @@
+# vim: softtabstop=4 shiftwidth=4 expandtab
 '''
 Provides the core API for Cheetah.
 
@@ -1050,6 +1051,7 @@ class Template(Servlet):
                  
                  file=None,
                  filter='RawOrEncodedUnicode', # which filter from Cheetah.Filters
+                 untaint=None,
                  filtersLib=Filters,
                  errorCatcher=None,
                  
@@ -1176,9 +1178,10 @@ class Template(Servlet):
                             ('file', 'string, file open for reading, or None'))
 
         if not isinstance(filter, (basestring, types.TypeType)) and not \
-                (isinstance(filter, type) and issubclass(filter, Filters.Filter)):
+                (isinstance(filter, type) and issubclass(filter, Filters.Filter)) and not \
+                callable(filter):
             raise TypeError(errmsgextra %
-                            ('filter', 'string or class',
+                            ('filter', 'string or class or function(value, rawExpr)',
                              '(if class, must be subclass of Cheetah.Filters.Filter)'))
         if not isinstance(filtersLib, (basestring, types.ModuleType)):
             raise TypeError(errmsgextra %
@@ -1247,7 +1250,7 @@ class Template(Servlet):
 
         self._initCheetahInstance(
             searchList=searchList, namespaces=namespaces,
-            filter=filter, filtersLib=filtersLib,
+            filter=filter, untaint=untaint, filtersLib=filtersLib,
             errorCatcher=errorCatcher,
             _globalSetVars=_globalSetVars,
             compilerSettings=compilerSettings,
@@ -1445,6 +1448,7 @@ class Template(Servlet):
                              searchList=None,
                              namespaces=None,
                              filter='RawOrEncodedUnicode', # which filter from Cheetah.Filters
+                             untaint=None,
                              filtersLib=Filters,
                              errorCatcher=None,
                              _globalSetVars=None,
@@ -1497,11 +1501,19 @@ class Template(Servlet):
         if isinstance(filter, basestring):
             filterName = filter
             klass = getattr(self._CHEETAH__filtersLib, filterName)
-        else:
+            filter = klass(self).filter
+        elif isinstance(filter, type) and issubclass(filter, Filters.Filter):
             klass = filter
             filterName = klass.__name__            
-        self._CHEETAH__currentFilter = self._CHEETAH__filters[filterName] = klass(self).filter
+            filter = klass(self).filter
+        elif callable(filter):
+            filterName = filter.__name__
+        self._CHEETAH__currentFilter = self._CHEETAH__filters[filterName] = filter
         self._CHEETAH__initialFilter = self._CHEETAH__currentFilter
+
+        if untaint is None:
+            untaint = lambda x: x
+        self._CHEETAH__untaint = untaint
 
         self._CHEETAH__errorCatchers = {}
         if errorCatcher:
