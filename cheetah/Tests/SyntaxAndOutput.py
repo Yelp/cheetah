@@ -3159,7 +3159,7 @@ class MacroEmptySourceBlock(OutputTest):
             'TestMacroNoArgs')
     	
     def test2(self):
-    	"""Test that a macro with no args is processed correctly."""
+    	"""Test that a macro with args is processed correctly."""
     	
     	self.verify("""\
 #TestMacroTakesArgs arguments, passed
