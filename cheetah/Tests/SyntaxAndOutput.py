@@ -3107,6 +3107,51 @@ class WhitespaceAfterDirectiveTokens(OutputTest):
                     "0123456789")
 
 
+class MacroEmptySourceBlock(OutputTest):
+    """Tests that emptySourceBlock property on macro is parsed correctly."""
+	
+    class TestMacroNoArgs(object):
+        """
+        Define a macro which does not take parameters but has an empty source block
+        """
+	
+        emptySourceBlock = True
+
+        def __init__(self, parser): pass
+        def __call__(self, src, **kwargs): return 'testMacroNoArgs'
+
+    class TestMacroTakesArgs(object):
+        """
+        Define a macro which takes parameters and spits them back out and has an empty source block
+        """
+        
+        emptySourceBlock = True
+        
+        def __init__(self, parser): pass
+        def __call__(self, src, customParam=None, **kwargs): return customParam
+        def convertArgStrToDict(self, argumentString, **kwargs):
+        	return {'customParam': argumentString}
+	
+    def _getCompilerSettings(self):
+        return {'macroDirectives': {
+            'testMacroNoArgs': self.TestMacroNoArgs ,
+            'testMacroTakesArgs': self.TestMacroTakesArgs
+        }}
+
+    def test1(self):
+    	"""Test that a macro with no args is processed correctly."""
+    	
+    	self.verify("""\
+#testMacroNoArgs
+""",
+            'testMacroNoArgs')
+    	
+    def test2(self):
+    	"""Test that a macro with no args is processed correctly."""
+    	self.verify("""\
+#testMacroTakesArgs arguments, passed
+""",
+            'arguments, passed')
 
 class DefmacroDirective(OutputTest):
     def _getCompilerSettings(self):
