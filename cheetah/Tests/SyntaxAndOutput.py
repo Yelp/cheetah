@@ -3118,7 +3118,7 @@ class MacroEmptySourceBlock(OutputTest):
         emptySourceBlock = True
 
         def __init__(self, parser): pass
-        def __call__(self, src, **kwargs): return 'testMacroNoArgs'
+        def __call__(self, src, **kwargs): return 'TestMacroNoArgs'
 
     class TestMacroTakesArgs(object):
         """
@@ -3131,27 +3131,50 @@ class MacroEmptySourceBlock(OutputTest):
         def __call__(self, src, customParam=None, **kwargs): return customParam
         def convertArgStrToDict(self, argumentString, **kwargs):
         	return {'customParam': argumentString}
+        
+    class TestMacroNotEmptySourceBlock(object):
+     	"""
+     	Define a macro that requires the end block by having emptySourceBlock = False
+     	"""
+     	
+     	emptySourceBlock = False
+     	
+        def __init__(self, parser): pass
+        def __call__(self, src, **kwargs): return 'TestMacroNotEmptySourceBlock'
+     	
 	
     def _getCompilerSettings(self):
         return {'macroDirectives': {
-            'testMacroNoArgs': self.TestMacroNoArgs ,
-            'testMacroTakesArgs': self.TestMacroTakesArgs
+            'TestMacroNoArgs': self.TestMacroNoArgs ,
+            'TestMacroTakesArgs': self.TestMacroTakesArgs,
+            'TestMacroNotEmptySourceBlock': self.TestMacroNotEmptySourceBlock
         }}
 
     def test1(self):
     	"""Test that a macro with no args is processed correctly."""
     	
     	self.verify("""\
-#testMacroNoArgs
+#TestMacroNoArgs
 """,
-            'testMacroNoArgs')
+            'TestMacroNoArgs')
     	
     def test2(self):
     	"""Test that a macro with no args is processed correctly."""
+    	
     	self.verify("""\
-#testMacroTakesArgs arguments, passed
+#TestMacroTakesArgs arguments, passed
 """,
             'arguments, passed')
+    	
+    def test3(self):
+    	"""Test that a macro with emptySourceBlock = False requires end macro."""
+    	
+    	self.verify("""\
+#TestMacroNotEmptySourceBlock
+herp
+#end TestMacroNotEmptySourceBlock
+""",
+            'TestMacroNotEmptySourceBlock')
 
 class DefmacroDirective(OutputTest):
     def _getCompilerSettings(self):

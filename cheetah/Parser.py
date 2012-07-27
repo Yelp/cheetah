@@ -2334,7 +2334,7 @@ class _HighLevelParser(_LowLevelParser):
             srcBlock = self.readToEOL(gobble=False)
             EOLCharsInShortForm = self.readToEOL(gobble=True)
             #self.readToEOL(gobble=False)
-        elif hasattr(macro, 'emptySourceBlock'):
+        elif getattr(macro, 'emptySourceBlock', False):
         	isShortForm = True
         	srcBlock = ''
         	self.readToEOL(gobble=False)
