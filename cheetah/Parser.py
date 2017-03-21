@@ -2344,6 +2344,8 @@ class _HighLevelParser(_LowLevelParser):
             args = self.getExpression(useNameMapper=False,
                                       pyTokensToBreakAt=[':']).strip()
 
+        # define the property emptySourceBlock on your macro in order to have it parsed as a macro without contents
+        # In this case, the macro will only pick up arguments just as before
         if self.matchColonForSingleLineShortFormDirective():
             isShortForm = True
             self.advance() # skip over :
@@ -2351,6 +2353,11 @@ class _HighLevelParser(_LowLevelParser):
             srcBlock = self.readToEOL(gobble=False)
             EOLCharsInShortForm = self.readToEOL(gobble=True)
             #self.readToEOL(gobble=False)
+        elif getattr(macro, 'emptySourceBlock', False):
+        	isShortForm = True
+        	srcBlock = ''
+        	self.readToEOL(gobble=False)
+        	EOLCharsInShortForm = self.readToEOL(gobble=True)
         else:
             isShortForm = False
             if self.peek()==':':

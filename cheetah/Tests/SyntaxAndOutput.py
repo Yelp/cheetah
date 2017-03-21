@@ -3078,6 +3078,74 @@ class WhitespaceAfterDirectiveTokens(OutputTest):
                     "0123456789")
 
 
+class MacroEmptySourceBlock(OutputTest):
+    """Tests that emptySourceBlock property on macro is parsed correctly."""
+	
+    class TestMacroNoArgs(object):
+        """
+        Define a macro which does not take parameters but has an empty source block
+        """
+	
+        emptySourceBlock = True
+
+        def __init__(self, parser): pass
+        def __call__(self, src, **kwargs): return 'TestMacroNoArgs'
+
+    class TestMacroTakesArgs(object):
+        """
+        Define a macro which takes parameters and spits them back out and has an empty source block
+        """
+        
+        emptySourceBlock = True
+        
+        def __init__(self, parser): pass
+        def __call__(self, src, customParam=None, **kwargs): return customParam
+        def convertArgStrToDict(self, argumentString, **kwargs):
+        	return {'customParam': argumentString}
+        
+    class TestMacroNotEmptySourceBlock(object):
+     	"""
+     	Define a macro that requires the end block by having emptySourceBlock = False
+     	"""
+     	
+     	emptySourceBlock = False
+     	
+        def __init__(self, parser): pass
+        def __call__(self, src, **kwargs): return 'TestMacroNotEmptySourceBlock'
+     	
+	
+    def _getCompilerSettings(self):
+        return {'macroDirectives': {
+            'TestMacroNoArgs': self.TestMacroNoArgs ,
+            'TestMacroTakesArgs': self.TestMacroTakesArgs,
+            'TestMacroNotEmptySourceBlock': self.TestMacroNotEmptySourceBlock
+        }}
+
+    def test1(self):
+    	"""Test that a macro with no args is processed correctly."""
+    	
+    	self.verify("""\
+#TestMacroNoArgs
+""",
+            'TestMacroNoArgs')
+    	
+    def test2(self):
+    	"""Test that a macro with args is processed correctly."""
+    	
+    	self.verify("""\
+#TestMacroTakesArgs arguments, passed
+""",
+            'arguments, passed')
+    	
+    def test3(self):
+    	"""Test that a macro with emptySourceBlock = False requires end macro."""
+    	
+    	self.verify("""\
+#TestMacroNotEmptySourceBlock
+herp
+#end TestMacroNotEmptySourceBlock
+""",
+            'TestMacroNotEmptySourceBlock')
 
 class DefmacroDirective(OutputTest):
     def _getCompilerSettings(self):
