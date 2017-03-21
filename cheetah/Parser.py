@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim: softtabstop=4 shiftwidth=4 expandtab
 """
 Parser classes for Cheetah's Compiler
 
@@ -1774,7 +1775,8 @@ class _HighLevelParser(_LowLevelParser):
                 directiveName = key
                 break
         if not directiveName:
-            raise ParseError(self, msg='Invalid end directive')
+            #TODO(buck|2011-11-22): should throw error at invalid *start* directive
+            raise ParseError(self, msg='Invalid end directive: %r' % directiveName)
         
         endOfFirstLinePos = self.findEOL()
         self.getExpression() # eat in any extra comment-like crap

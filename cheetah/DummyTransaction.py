@@ -1,4 +1,4 @@
-
+# vim: softtabstop=4 shiftwidth=4 expandtab
 '''
 Provides dummy Transaction and Response classes is used by Cheetah in place
 of real Webware transactions when the Template obj is not used directly as a
