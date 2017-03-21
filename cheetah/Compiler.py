@@ -1372,7 +1372,7 @@ class ClassCompiler(GenUtils):
         ## first test to make sure that the user hasn't used any fancy Cheetah syntax
         #  (placeholders, directives, etc.) inside the expression
         if attribExpr.find('VFN(') != -1 or attribExpr.find('VFFSL(') != -1:
-            raise ParseError(self,
+            raise ParseError( self._moduleCompiler._parser,
                              'Invalid #attr directive.' +
                              ' It should only contain simple Python literals.')
         ## now add the attribute
